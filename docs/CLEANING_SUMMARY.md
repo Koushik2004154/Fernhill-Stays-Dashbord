@@ -1,0 +1,744 @@
+# Cleaning Summary: Bookings Jan-May 2026
+
+This summary documents every cleaning decision made by `scripts/clean_data.py`.
+
+## Inputs and Outputs
+
+- Source CSV: `data/bookings_jan_may_2026.csv`
+- Audit report used: `docs/DATA_AUDIT.md`
+- Cleaned CSV: `data/cleaned_bookings.csv`
+
+## Required Metrics
+
+- Original row count: 238
+- Final row count: 226
+- Rows modified: 210
+- Rows removed: 12
+- Revenue corrections: 11
+- Duplicate records removed: 8
+
+## Assumptions Made
+
+- The source file represents stays from January through May 2026, so ambiguous dates are parsed to a date in that window when possible.
+- For dates that remain ambiguous after the reporting-window check, day-first parsing is preferred because the property context is India.
+- The first occurrence of a duplicate booking_id is treated as the system of record; later occurrences are removed and documented.
+- Missing booking_channel values are retained as Unknown because channel cannot be inferred from other fields.
+- Missing nightly_rate_inr and total_amount_inr are derived only when nights and the counterpart revenue field make the calculation deterministic.
+- Revenue totals should equal nightly_rate_inr multiplied by nights; total_amount_inr is corrected to that formula when the inputs are valid.
+- Rows with zero or negative nights are invalid stays and are removed rather than imputed.
+
+## Business Rationale by Cleaning Rule
+
+| Rule | Records changed | Business rationale |
+| --- | ---: | --- |
+| standardize_property | 101 | Creates one property dimension per real property so revenue and occupancy are not split across casing or spacing variants. |
+| standardize_channel | 57 | Creates reliable channel attribution for source mix, commissions, and acquisition reporting. |
+| standardize_status | 70 | Creates consistent lifecycle labels for confirmed, stayed, cancelled, and no-show analysis. |
+| iso_date_conversion | 171 | Makes dates sortable, joinable, and safe for monthly trend reporting. |
+| missing_booking_channel | 27 | Retains the booking while preserving the fact that attribution is unknown. |
+| missing_nightly_rate | 9 | Backfills a deterministic rate from total amount and nights without inventing new commercial terms. |
+| missing_total_amount | 3 | Backfills deterministic booking revenue from nightly rate and nights. |
+| negative_rate_abs | 0 | Treats a negative rate as a sign error before calculating total revenue. |
+| revenue_formula_correction | 11 | Aligns booking revenue to the auditable formula nightly_rate_inr * nights. |
+| remove_duplicate_booking_id | 8 | Prevents duplicate bookings from overstating revenue, occupancy, and guest volume. |
+| remove_impossible_stay | 4 | Removes records that cannot represent a real stay because nights is zero, negative, missing, or non-integer. |
+| remove_unparseable_date | 0 | Avoids assigning revenue and occupancy to an unsafe reporting period. |
+
+## Rows Removed
+
+No records were silently dropped. Removed records are listed below.
+
+- csv_line: 72; booking_id: BK1220; reason: Removed impossible stay with zero, negative, missing, or non-integer nights.; nights: 0
+- csv_line: 77; booking_id: BK1138; reason: Removed duplicate booking_id after retaining the first occurrence.
+- csv_line: 91; booking_id: BK1044; reason: Removed duplicate booking_id after retaining the first occurrence.
+- csv_line: 110; booking_id: BK1133; reason: Removed impossible stay with zero, negative, missing, or non-integer nights.; nights: 0
+- csv_line: 123; booking_id: BK1028; reason: Removed duplicate booking_id after retaining the first occurrence.
+- csv_line: 161; booking_id: BK1207; reason: Removed duplicate booking_id after retaining the first occurrence.
+- csv_line: 192; booking_id: BK1268; reason: Removed impossible stay with zero, negative, missing, or non-integer nights.; nights: 0
+- csv_line: 199; booking_id: BK1068; reason: Removed duplicate booking_id after retaining the first occurrence.
+- csv_line: 205; booking_id: BK1285; reason: Removed duplicate booking_id after retaining the first occurrence.
+- csv_line: 209; booking_id: BK1096; reason: Removed duplicate booking_id after retaining the first occurrence.
+- csv_line: 215; booking_id: BK1107; reason: Removed impossible stay with zero, negative, missing, or non-integer nights.; nights: 0
+- csv_line: 226; booking_id: BK1126; reason: Removed duplicate booking_id after retaining the first occurrence.
+
+## Revenue Corrections
+
+- csv_line: 7; booking_id: BK1118; old_total_amount_inr: 81750; new_total_amount_inr: 8175; nightly_rate_inr: 2725; nights: 3; reason: Corrected total_amount_inr to nightly_rate_inr * nights.
+- csv_line: 34; booking_id: BK1214; old_total_amount_inr: 54460; new_total_amount_inr: 5446; nightly_rate_inr: 2723; nights: 2; reason: Corrected total_amount_inr to nightly_rate_inr * nights.
+- csv_line: 68; booking_id: BK1250; old_total_amount_inr: -28497; new_total_amount_inr: 28497; nightly_rate_inr: 4071; nights: 7; reason: Corrected total_amount_inr to nightly_rate_inr * nights.
+- csv_line: 89; booking_id: BK1164; old_total_amount_inr: 183200; new_total_amount_inr: 18320; nightly_rate_inr: 3664; nights: 5; reason: Corrected total_amount_inr to nightly_rate_inr * nights.
+- csv_line: 101; booking_id: BK1179; old_total_amount_inr: -21265; new_total_amount_inr: 21265; nightly_rate_inr: 4253; nights: 5; reason: Corrected total_amount_inr to nightly_rate_inr * nights.
+- csv_line: 103; booking_id: BK1181; old_total_amount_inr: 90330; new_total_amount_inr: 9033; nightly_rate_inr: 3011; nights: 3; reason: Corrected total_amount_inr to nightly_rate_inr * nights.
+- csv_line: 106; booking_id: BK1146; old_total_amount_inr: 195480; new_total_amount_inr: 19548; nightly_rate_inr: 6516; nights: 3; reason: Corrected total_amount_inr to nightly_rate_inr * nights.
+- csv_line: 116; booking_id: BK1126; old_total_amount_inr: 294700; new_total_amount_inr: 29470; nightly_rate_inr: 4210; nights: 7; reason: Corrected total_amount_inr to nightly_rate_inr * nights.
+- csv_line: 118; booking_id: BK1067; old_total_amount_inr: -9138; new_total_amount_inr: 9138; nightly_rate_inr: 3046; nights: 3; reason: Corrected total_amount_inr to nightly_rate_inr * nights.
+- csv_line: 154; booking_id: BK1238; old_total_amount_inr: -28590; new_total_amount_inr: 28590; nightly_rate_inr: 5718; nights: 5; reason: Corrected total_amount_inr to nightly_rate_inr * nights.
+- csv_line: 198; booking_id: BK1213; old_total_amount_inr: -24185; new_total_amount_inr: 24185; nightly_rate_inr: 3455; nights: 7; reason: Corrected total_amount_inr to nightly_rate_inr * nights.
+
+## Missing Value Handling
+
+- csv_line: 11; booking_id: BK1072; field: booking_channel; action: Set to Unknown instead of dropping the booking.
+- csv_line: 21; booking_id: BK1248; field: nightly_rate_inr; action: Derived as total_amount_inr divided by nights.
+- csv_line: 22; booking_id: BK1231; field: total_amount_inr; action: Derived as nightly_rate_inr multiplied by nights.
+- csv_line: 26; booking_id: BK1172; field: booking_channel; action: Set to Unknown instead of dropping the booking.
+- csv_line: 27; booking_id: BK1087; field: booking_channel; action: Set to Unknown instead of dropping the booking.
+- csv_line: 42; booking_id: BK1266; field: nightly_rate_inr; action: Derived as total_amount_inr divided by nights.
+- csv_line: 48; booking_id: BK1044; field: booking_channel; action: Set to Unknown instead of dropping the booking.
+- csv_line: 54; booking_id: BK1151; field: booking_channel; action: Set to Unknown instead of dropping the booking.
+- csv_line: 60; booking_id: BK1178; field: booking_channel; action: Set to Unknown instead of dropping the booking.
+- csv_line: 68; booking_id: BK1250; field: booking_channel; action: Set to Unknown instead of dropping the booking.
+- csv_line: 74; booking_id: BK1069; field: booking_channel; action: Set to Unknown instead of dropping the booking.
+- csv_line: 99; booking_id: BK1037; field: nightly_rate_inr; action: Derived as total_amount_inr divided by nights.
+- csv_line: 102; booking_id: BK1056; field: nightly_rate_inr; action: Derived as total_amount_inr divided by nights.
+- csv_line: 103; booking_id: BK1181; field: booking_channel; action: Set to Unknown instead of dropping the booking.
+- csv_line: 105; booking_id: BK1019; field: booking_channel; action: Set to Unknown instead of dropping the booking.
+- csv_line: 106; booking_id: BK1146; field: booking_channel; action: Set to Unknown instead of dropping the booking.
+- csv_line: 112; booking_id: BK1216; field: nightly_rate_inr; action: Derived as total_amount_inr divided by nights.
+- csv_line: 114; booking_id: BK1028; field: booking_channel; action: Set to Unknown instead of dropping the booking.
+- csv_line: 115; booking_id: BK1097; field: booking_channel; action: Set to Unknown instead of dropping the booking.
+- csv_line: 127; booking_id: BK1221; field: booking_channel; action: Set to Unknown instead of dropping the booking.
+- csv_line: 128; booking_id: BK1051; field: booking_channel; action: Set to Unknown instead of dropping the booking.
+- csv_line: 140; booking_id: BK1103; field: booking_channel; action: Set to Unknown instead of dropping the booking.
+- csv_line: 147; booking_id: BK1200; field: booking_channel; action: Set to Unknown instead of dropping the booking.
+- csv_line: 150; booking_id: BK1048; field: booking_channel; action: Set to Unknown instead of dropping the booking.
+- csv_line: 156; booking_id: BK1041; field: booking_channel; action: Set to Unknown instead of dropping the booking.
+- csv_line: 159; booking_id: BK1001; field: nightly_rate_inr; action: Derived as total_amount_inr divided by nights.
+- csv_line: 163; booking_id: BK1243; field: nightly_rate_inr; action: Derived as total_amount_inr divided by nights.
+- csv_line: 164; booking_id: BK1194; field: nightly_rate_inr; action: Derived as total_amount_inr divided by nights.
+- csv_line: 170; booking_id: BK1239; field: total_amount_inr; action: Derived as nightly_rate_inr multiplied by nights.
+- csv_line: 172; booking_id: BK1173; field: booking_channel; action: Set to Unknown instead of dropping the booking.
+- csv_line: 191; booking_id: BK1186; field: booking_channel; action: Set to Unknown instead of dropping the booking.
+- csv_line: 195; booking_id: BK1171; field: booking_channel; action: Set to Unknown instead of dropping the booking.
+- csv_line: 197; booking_id: BK1081; field: booking_channel; action: Set to Unknown instead of dropping the booking.
+- csv_line: 197; booking_id: BK1081; field: total_amount_inr; action: Derived as nightly_rate_inr multiplied by nights.
+- csv_line: 211; booking_id: BK1263; field: nightly_rate_inr; action: Derived as total_amount_inr divided by nights.
+- csv_line: 224; booking_id: BK1158; field: booking_channel; action: Set to Unknown instead of dropping the booking.
+- csv_line: 229; booking_id: BK1233; field: booking_channel; action: Set to Unknown instead of dropping the booking.
+- csv_line: 236; booking_id: BK1203; field: booking_channel; action: Set to Unknown instead of dropping the booking.
+- csv_line: 239; booking_id: BK1259; field: booking_channel; action: Set to Unknown instead of dropping the booking.
+
+## Date Conversions
+
+- csv_line: 3; booking_id: BK1150; old_check_in_date: 9 Mar 2026; new_check_in_date: 2026-03-09; parse_rule: %d %b %Y
+- csv_line: 4; booking_id: BK1206; old_check_in_date: 02/02/2026; new_check_in_date: 2026-02-02; parse_rule: %d/%m/%Y
+- csv_line: 5; booking_id: BK1197; old_check_in_date: 03/04/2026; new_check_in_date: 2026-04-03; parse_rule: %d/%m/%Y
+- csv_line: 7; booking_id: BK1118; old_check_in_date: 16 Mar 2026; new_check_in_date: 2026-03-16; parse_rule: %d %b %Y
+- csv_line: 8; booking_id: BK1177; old_check_in_date: 05-11-2026; new_check_in_date: 2026-05-11; parse_rule: %m-%d-%Y
+- csv_line: 9; booking_id: BK1025; old_check_in_date: 22/02/2026; new_check_in_date: 2026-02-22; parse_rule: %d/%m/%Y
+- csv_line: 10; booking_id: BK1101; old_check_in_date: 01-09-2026; new_check_in_date: 2026-01-09; parse_rule: %m-%d-%Y
+- csv_line: 12; booking_id: BK1076; old_check_in_date: 21 Mar 2026; new_check_in_date: 2026-03-21; parse_rule: %d %b %Y
+- csv_line: 13; booking_id: BK1247; old_check_in_date: 17 Mar 2026; new_check_in_date: 2026-03-17; parse_rule: %d %b %Y
+- csv_line: 14; booking_id: BK1207; old_check_in_date: 7 Mar 2026; new_check_in_date: 2026-03-07; parse_rule: %d %b %Y
+- csv_line: 15; booking_id: BK1269; old_check_in_date: 21/03/2026; new_check_in_date: 2026-03-21; parse_rule: %d/%m/%Y
+- csv_line: 16; booking_id: BK1138; old_check_in_date: 05-05-2026; new_check_in_date: 2026-05-05; parse_rule: %d-%m-%Y
+- csv_line: 17; booking_id: BK1064; old_check_in_date: 16 Mar 2026; new_check_in_date: 2026-03-16; parse_rule: %d %b %Y
+- csv_line: 18; booking_id: BK1190; old_check_in_date: 03-06-2026; new_check_in_date: 2026-03-06; parse_rule: %m-%d-%Y
+- csv_line: 19; booking_id: BK1109; old_check_in_date: 2 Mar 2026; new_check_in_date: 2026-03-02; parse_rule: %d %b %Y
+- csv_line: 20; booking_id: BK1246; old_check_in_date: 03-12-2026; new_check_in_date: 2026-03-12; parse_rule: %m-%d-%Y
+- csv_line: 21; booking_id: BK1248; old_check_in_date: 06/02/2026; new_check_in_date: 2026-02-06; parse_rule: %d/%m/%Y
+- csv_line: 23; booking_id: BK1036; old_check_in_date: 03-20-2026; new_check_in_date: 2026-03-20; parse_rule: %m-%d-%Y
+- csv_line: 24; booking_id: BK1147; old_check_in_date: 18 Mar 2026; new_check_in_date: 2026-03-18; parse_rule: %d %b %Y
+- csv_line: 25; booking_id: BK1165; old_check_in_date: 03-24-2026; new_check_in_date: 2026-03-24; parse_rule: %m-%d-%Y
+- csv_line: 26; booking_id: BK1172; old_check_in_date: 27/04/2026; new_check_in_date: 2026-04-27; parse_rule: %d/%m/%Y
+- csv_line: 27; booking_id: BK1087; old_check_in_date: 19 Mar 2026; new_check_in_date: 2026-03-19; parse_rule: %d %b %Y
+- csv_line: 29; booking_id: BK1225; old_check_in_date: 04-08-2026; new_check_in_date: 2026-04-08; parse_rule: %m-%d-%Y
+- csv_line: 30; booking_id: BK1023; old_check_in_date: 17/04/2026; new_check_in_date: 2026-04-17; parse_rule: %d/%m/%Y
+- csv_line: 31; booking_id: BK1155; old_check_in_date: 11/04/2026; new_check_in_date: 2026-04-11; parse_rule: %d/%m/%Y
+- csv_line: 33; booking_id: BK1091; old_check_in_date: 21 Mar 2026; new_check_in_date: 2026-03-21; parse_rule: %d %b %Y
+- csv_line: 34; booking_id: BK1214; old_check_in_date: 3 Mar 2026; new_check_in_date: 2026-03-03; parse_rule: %d %b %Y
+- csv_line: 35; booking_id: BK1274; old_check_in_date: 06/05/2026; new_check_in_date: 2026-05-06; parse_rule: %d/%m/%Y
+- csv_line: 37; booking_id: BK1004; old_check_in_date: 05-07-2026; new_check_in_date: 2026-05-07; parse_rule: %m-%d-%Y
+- csv_line: 38; booking_id: BK1058; old_check_in_date: 04/02/2026; new_check_in_date: 2026-02-04; parse_rule: %d/%m/%Y
+- csv_line: 39; booking_id: BK1168; old_check_in_date: 27/05/2026; new_check_in_date: 2026-05-27; parse_rule: %d/%m/%Y
+- csv_line: 40; booking_id: BK1102; old_check_in_date: 20 Mar 2026; new_check_in_date: 2026-03-20; parse_rule: %d %b %Y
+- csv_line: 41; booking_id: BK1034; old_check_in_date: 01-04-2026; new_check_in_date: 2026-04-01; parse_rule: %d-%m-%Y
+- csv_line: 42; booking_id: BK1266; old_check_in_date: 03-21-2026; new_check_in_date: 2026-03-21; parse_rule: %m-%d-%Y
+- csv_line: 44; booking_id: BK1218; old_check_in_date: 02-08-2026; new_check_in_date: 2026-02-08; parse_rule: %m-%d-%Y
+- csv_line: 45; booking_id: BK1049; old_check_in_date: 05-26-2026; new_check_in_date: 2026-05-26; parse_rule: %m-%d-%Y
+- csv_line: 46; booking_id: BK1134; old_check_in_date: 02-08-2026; new_check_in_date: 2026-02-08; parse_rule: %m-%d-%Y
+- csv_line: 47; booking_id: BK1256; old_check_in_date: 04-03-2026; new_check_in_date: 2026-03-04; parse_rule: %d-%m-%Y
+- csv_line: 48; booking_id: BK1044; old_check_in_date: 04-15-2026; new_check_in_date: 2026-04-15; parse_rule: %m-%d-%Y
+- csv_line: 49; booking_id: BK1099; old_check_in_date: 26/04/2026; new_check_in_date: 2026-04-26; parse_rule: %d/%m/%Y
+- csv_line: 50; booking_id: BK1272; old_check_in_date: 26/03/2026; new_check_in_date: 2026-03-26; parse_rule: %d/%m/%Y
+- csv_line: 51; booking_id: BK1089; old_check_in_date: 03-20-2026; new_check_in_date: 2026-03-20; parse_rule: %m-%d-%Y
+- csv_line: 52; booking_id: BK1030; old_check_in_date: 22 Mar 2026; new_check_in_date: 2026-03-22; parse_rule: %d %b %Y
+- csv_line: 54; booking_id: BK1151; old_check_in_date: 26/03/2026; new_check_in_date: 2026-03-26; parse_rule: %d/%m/%Y
+- csv_line: 55; booking_id: BK1082; old_check_in_date: 17 Mar 2026; new_check_in_date: 2026-03-17; parse_rule: %d %b %Y
+- csv_line: 56; booking_id: BK1142; old_check_in_date: 25/02/2026; new_check_in_date: 2026-02-25; parse_rule: %d/%m/%Y
+- csv_line: 57; booking_id: BK1199; old_check_in_date: 7 Mar 2026; new_check_in_date: 2026-03-07; parse_rule: %d %b %Y
+- csv_line: 58; booking_id: BK1085; old_check_in_date: 19/02/2026; new_check_in_date: 2026-02-19; parse_rule: %d/%m/%Y
+- csv_line: 59; booking_id: BK1282; old_check_in_date: 15/02/2026; new_check_in_date: 2026-02-15; parse_rule: %d/%m/%Y
+- csv_line: 60; booking_id: BK1178; old_check_in_date: 03-18-2026; new_check_in_date: 2026-03-18; parse_rule: %m-%d-%Y
+- csv_line: 61; booking_id: BK1003; old_check_in_date: 28/03/2026; new_check_in_date: 2026-03-28; parse_rule: %d/%m/%Y
+- csv_line: 62; booking_id: BK1071; old_check_in_date: 18 Mar 2026; new_check_in_date: 2026-03-18; parse_rule: %d %b %Y
+- csv_line: 63; booking_id: BK1195; old_check_in_date: 18/01/2026; new_check_in_date: 2026-01-18; parse_rule: %d/%m/%Y
+- csv_line: 65; booking_id: BK1193; old_check_in_date: 22 Mar 2026; new_check_in_date: 2026-03-22; parse_rule: %d %b %Y
+- csv_line: 66; booking_id: BK1026; old_check_in_date: 02-12-2026; new_check_in_date: 2026-02-12; parse_rule: %m-%d-%Y
+- csv_line: 68; booking_id: BK1250; old_check_in_date: 14/04/2026; new_check_in_date: 2026-04-14; parse_rule: %d/%m/%Y
+- csv_line: 70; booking_id: BK1094; old_check_in_date: 15 Mar 2026; new_check_in_date: 2026-03-15; parse_rule: %d %b %Y
+- csv_line: 73; booking_id: BK1131; old_check_in_date: 04-10-2026; new_check_in_date: 2026-04-10; parse_rule: %m-%d-%Y
+- csv_line: 74; booking_id: BK1069; old_check_in_date: 01-05-2026; new_check_in_date: 2026-05-01; parse_rule: %d-%m-%Y
+- csv_line: 75; booking_id: BK1120; old_check_in_date: 15 Mar 2026; new_check_in_date: 2026-03-15; parse_rule: %d %b %Y
+- csv_line: 76; booking_id: BK1070; old_check_in_date: 28/03/2026; new_check_in_date: 2026-03-28; parse_rule: %d/%m/%Y
+- csv_line: 78; booking_id: BK1066; old_check_in_date: 25 Mar 2026; new_check_in_date: 2026-03-25; parse_rule: %d %b %Y
+- csv_line: 79; booking_id: BK1271; old_check_in_date: 02-23-2026; new_check_in_date: 2026-02-23; parse_rule: %m-%d-%Y
+- csv_line: 81; booking_id: BK1149; old_check_in_date: 2 Mar 2026; new_check_in_date: 2026-03-02; parse_rule: %d %b %Y
+- csv_line: 82; booking_id: BK1040; old_check_in_date: 5 Mar 2026; new_check_in_date: 2026-03-05; parse_rule: %d %b %Y
+- csv_line: 83; booking_id: BK1162; old_check_in_date: 09/05/2026; new_check_in_date: 2026-05-09; parse_rule: %d/%m/%Y
+- csv_line: 84; booking_id: BK1012; old_check_in_date: 03-14-2026; new_check_in_date: 2026-03-14; parse_rule: %m-%d-%Y
+- csv_line: 89; booking_id: BK1164; old_check_in_date: 26/02/2026; new_check_in_date: 2026-02-26; parse_rule: %d/%m/%Y
+- csv_line: 90; booking_id: BK1129; old_check_in_date: 17/04/2026; new_check_in_date: 2026-04-17; parse_rule: %d/%m/%Y
+- csv_line: 92; booking_id: BK1111; old_check_in_date: 14 Mar 2026; new_check_in_date: 2026-03-14; parse_rule: %d %b %Y
+- csv_line: 95; booking_id: BK1135; old_check_in_date: 6 Mar 2026; new_check_in_date: 2026-03-06; parse_rule: %d %b %Y
+- csv_line: 97; booking_id: BK1141; old_check_in_date: 13/02/2026; new_check_in_date: 2026-02-13; parse_rule: %d/%m/%Y
+- csv_line: 98; booking_id: BK1277; old_check_in_date: 11/03/2026; new_check_in_date: 2026-03-11; parse_rule: %d/%m/%Y
+- csv_line: 99; booking_id: BK1037; old_check_in_date: 04-22-2026; new_check_in_date: 2026-04-22; parse_rule: %m-%d-%Y
+- csv_line: 100; booking_id: BK1210; old_check_in_date: 02/04/2026; new_check_in_date: 2026-04-02; parse_rule: %d/%m/%Y
+- csv_line: 104; booking_id: BK1252; old_check_in_date: 02-14-2026; new_check_in_date: 2026-02-14; parse_rule: %m-%d-%Y
+- csv_line: 105; booking_id: BK1019; old_check_in_date: 4 Mar 2026; new_check_in_date: 2026-03-04; parse_rule: %d %b %Y
+- csv_line: 106; booking_id: BK1146; old_check_in_date: 04-12-2026; new_check_in_date: 2026-04-12; parse_rule: %m-%d-%Y
+- csv_line: 107; booking_id: BK1167; old_check_in_date: 16/04/2026; new_check_in_date: 2026-04-16; parse_rule: %d/%m/%Y
+- csv_line: 108; booking_id: BK1184; old_check_in_date: 04-06-2026; new_check_in_date: 2026-04-06; parse_rule: %m-%d-%Y
+- csv_line: 112; booking_id: BK1216; old_check_in_date: 05-14-2026; new_check_in_date: 2026-05-14; parse_rule: %m-%d-%Y
+- csv_line: 113; booking_id: BK1208; old_check_in_date: 04-18-2026; new_check_in_date: 2026-04-18; parse_rule: %m-%d-%Y
+- csv_line: 114; booking_id: BK1028; old_check_in_date: 21/01/2026; new_check_in_date: 2026-01-21; parse_rule: %d/%m/%Y
+- csv_line: 115; booking_id: BK1097; old_check_in_date: 05-26-2026; new_check_in_date: 2026-05-26; parse_rule: %m-%d-%Y
+- csv_line: 116; booking_id: BK1126; old_check_in_date: 04-03-2026; new_check_in_date: 2026-03-04; parse_rule: %d-%m-%Y
+- csv_line: 117; booking_id: BK1139; old_check_in_date: 17/04/2026; new_check_in_date: 2026-04-17; parse_rule: %d/%m/%Y
+- csv_line: 119; booking_id: BK1098; old_check_in_date: 19/01/2026; new_check_in_date: 2026-01-19; parse_rule: %d/%m/%Y
+- csv_line: 120; booking_id: BK1115; old_check_in_date: 23/03/2026; new_check_in_date: 2026-03-23; parse_rule: %d/%m/%Y
+- csv_line: 122; booking_id: BK1211; old_check_in_date: 04-19-2026; new_check_in_date: 2026-04-19; parse_rule: %m-%d-%Y
+- csv_line: 124; booking_id: BK1022; old_check_in_date: 26 Mar 2026; new_check_in_date: 2026-03-26; parse_rule: %d %b %Y
+- csv_line: 125; booking_id: BK1187; old_check_in_date: 02-06-2026; new_check_in_date: 2026-02-06; parse_rule: %m-%d-%Y
+- csv_line: 126; booking_id: BK1279; old_check_in_date: 4 Mar 2026; new_check_in_date: 2026-03-04; parse_rule: %d %b %Y
+- csv_line: 128; booking_id: BK1051; old_check_in_date: 01/05/2026; new_check_in_date: 2026-05-01; parse_rule: %d/%m/%Y
+- csv_line: 133; booking_id: BK1257; old_check_in_date: 21 Mar 2026; new_check_in_date: 2026-03-21; parse_rule: %d %b %Y
+- csv_line: 134; booking_id: BK1286; old_check_in_date: 04-12-2026; new_check_in_date: 2026-04-12; parse_rule: %m-%d-%Y
+- csv_line: 135; booking_id: BK1280; old_check_in_date: 23/04/2026; new_check_in_date: 2026-04-23; parse_rule: %d/%m/%Y
+- csv_line: 136; booking_id: BK1144; old_check_in_date: 02/01/2026; new_check_in_date: 2026-01-02; parse_rule: %d/%m/%Y
+- csv_line: 137; booking_id: BK1265; old_check_in_date: 22/05/2026; new_check_in_date: 2026-05-22; parse_rule: %d/%m/%Y
+- csv_line: 138; booking_id: BK1042; old_check_in_date: 02-26-2026; new_check_in_date: 2026-02-26; parse_rule: %m-%d-%Y
+- csv_line: 139; booking_id: BK1229; old_check_in_date: 03/05/2026; new_check_in_date: 2026-05-03; parse_rule: %d/%m/%Y
+- csv_line: 140; booking_id: BK1103; old_check_in_date: 02-18-2026; new_check_in_date: 2026-02-18; parse_rule: %m-%d-%Y
+- csv_line: 141; booking_id: BK1112; old_check_in_date: 27/01/2026; new_check_in_date: 2026-01-27; parse_rule: %d/%m/%Y
+- csv_line: 143; booking_id: BK1130; old_check_in_date: 05-17-2026; new_check_in_date: 2026-05-17; parse_rule: %m-%d-%Y
+- csv_line: 144; booking_id: BK1122; old_check_in_date: 27/04/2026; new_check_in_date: 2026-04-27; parse_rule: %d/%m/%Y
+- csv_line: 145; booking_id: BK1024; old_check_in_date: 20 Mar 2026; new_check_in_date: 2026-03-20; parse_rule: %d %b %Y
+- csv_line: 146; booking_id: BK1119; old_check_in_date: 16 Mar 2026; new_check_in_date: 2026-03-16; parse_rule: %d %b %Y
+- csv_line: 147; booking_id: BK1200; old_check_in_date: 02-25-2026; new_check_in_date: 2026-02-25; parse_rule: %m-%d-%Y
+- csv_line: 148; booking_id: BK1035; old_check_in_date: 09/02/2026; new_check_in_date: 2026-02-09; parse_rule: %d/%m/%Y
+- csv_line: 149; booking_id: BK1222; old_check_in_date: 22/05/2026; new_check_in_date: 2026-05-22; parse_rule: %d/%m/%Y
+- csv_line: 150; booking_id: BK1048; old_check_in_date: 27/02/2026; new_check_in_date: 2026-02-27; parse_rule: %d/%m/%Y
+- csv_line: 151; booking_id: BK1201; old_check_in_date: 08/05/2026; new_check_in_date: 2026-05-08; parse_rule: %d/%m/%Y
+- csv_line: 153; booking_id: BK1276; old_check_in_date: 09/03/2026; new_check_in_date: 2026-03-09; parse_rule: %d/%m/%Y
+- csv_line: 154; booking_id: BK1238; old_check_in_date: 19 Mar 2026; new_check_in_date: 2026-03-19; parse_rule: %d %b %Y
+- csv_line: 155; booking_id: BK1113; old_check_in_date: 04-28-2026; new_check_in_date: 2026-04-28; parse_rule: %m-%d-%Y
+- csv_line: 156; booking_id: BK1041; old_check_in_date: 21 Mar 2026; new_check_in_date: 2026-03-21; parse_rule: %d %b %Y
+- csv_line: 158; booking_id: BK1110; old_check_in_date: 03-20-2026; new_check_in_date: 2026-03-20; parse_rule: %m-%d-%Y
+- csv_line: 159; booking_id: BK1001; old_check_in_date: 05/02/2026; new_check_in_date: 2026-02-05; parse_rule: %d/%m/%Y
+- csv_line: 162; booking_id: BK1007; old_check_in_date: 03-13-2026; new_check_in_date: 2026-03-13; parse_rule: %m-%d-%Y
+- csv_line: 163; booking_id: BK1243; old_check_in_date: 13 Mar 2026; new_check_in_date: 2026-03-13; parse_rule: %d %b %Y
+- csv_line: 164; booking_id: BK1194; old_check_in_date: 18/01/2026; new_check_in_date: 2026-01-18; parse_rule: %d/%m/%Y
+- csv_line: 165; booking_id: BK1281; old_check_in_date: 03-28-2026; new_check_in_date: 2026-03-28; parse_rule: %m-%d-%Y
+- csv_line: 166; booking_id: BK1244; old_check_in_date: 03-11-2026; new_check_in_date: 2026-03-11; parse_rule: %m-%d-%Y
+- csv_line: 167; booking_id: BK1029; old_check_in_date: 01-03-2026; new_check_in_date: 2026-03-01; parse_rule: %d-%m-%Y
+- csv_line: 168; booking_id: BK1013; old_check_in_date: 18 Mar 2026; new_check_in_date: 2026-03-18; parse_rule: %d %b %Y
+- csv_line: 169; booking_id: BK1160; old_check_in_date: 5 Mar 2026; new_check_in_date: 2026-03-05; parse_rule: %d %b %Y
+- csv_line: 170; booking_id: BK1239; old_check_in_date: 2 Mar 2026; new_check_in_date: 2026-03-02; parse_rule: %d %b %Y
+- csv_line: 171; booking_id: BK1105; old_check_in_date: 07/03/2026; new_check_in_date: 2026-03-07; parse_rule: %d/%m/%Y
+- csv_line: 172; booking_id: BK1173; old_check_in_date: 19 Mar 2026; new_check_in_date: 2026-03-19; parse_rule: %d %b %Y
+- csv_line: 174; booking_id: BK1065; old_check_in_date: 05-12-2026; new_check_in_date: 2026-05-12; parse_rule: %m-%d-%Y
+- csv_line: 175; booking_id: BK1224; old_check_in_date: 02-19-2026; new_check_in_date: 2026-02-19; parse_rule: %m-%d-%Y
+- csv_line: 177; booking_id: BK1278; old_check_in_date: 24 Mar 2026; new_check_in_date: 2026-03-24; parse_rule: %d %b %Y
+- csv_line: 179; booking_id: BK1240; old_check_in_date: 23 Mar 2026; new_check_in_date: 2026-03-23; parse_rule: %d %b %Y
+- csv_line: 180; booking_id: BK1267; old_check_in_date: 26/01/2026; new_check_in_date: 2026-01-26; parse_rule: %d/%m/%Y
+- csv_line: 182; booking_id: BK1096; old_check_in_date: 12/05/2026; new_check_in_date: 2026-05-12; parse_rule: %d/%m/%Y
+- csv_line: 183; booking_id: BK1227; old_check_in_date: 01-01-2026; new_check_in_date: 2026-01-01; parse_rule: %d-%m-%Y
+- csv_line: 185; booking_id: BK1191; old_check_in_date: 24 Mar 2026; new_check_in_date: 2026-03-24; parse_rule: %d %b %Y
+- csv_line: 186; booking_id: BK1080; old_check_in_date: 2 Mar 2026; new_check_in_date: 2026-03-02; parse_rule: %d %b %Y
+- csv_line: 187; booking_id: BK1061; old_check_in_date: 03-28-2026; new_check_in_date: 2026-03-28; parse_rule: %m-%d-%Y
+- csv_line: 188; booking_id: BK1059; old_check_in_date: 12 Mar 2026; new_check_in_date: 2026-03-12; parse_rule: %d %b %Y
+- csv_line: 189; booking_id: BK1116; old_check_in_date: 04-14-2026; new_check_in_date: 2026-04-14; parse_rule: %m-%d-%Y
+- csv_line: 190; booking_id: BK1275; old_check_in_date: 12/04/2026; new_check_in_date: 2026-04-12; parse_rule: %d/%m/%Y
+- csv_line: 191; booking_id: BK1186; old_check_in_date: 04-09-2026; new_check_in_date: 2026-04-09; parse_rule: %m-%d-%Y
+- csv_line: 193; booking_id: BK1261; old_check_in_date: 01/04/2026; new_check_in_date: 2026-04-01; parse_rule: %d/%m/%Y
+- csv_line: 194; booking_id: BK1241; old_check_in_date: 17/02/2026; new_check_in_date: 2026-02-17; parse_rule: %d/%m/%Y
+- csv_line: 197; booking_id: BK1081; old_check_in_date: 01-21-2026; new_check_in_date: 2026-01-21; parse_rule: %m-%d-%Y
+- csv_line: 198; booking_id: BK1213; old_check_in_date: 24/02/2026; new_check_in_date: 2026-02-24; parse_rule: %d/%m/%Y
+- csv_line: 200; booking_id: BK1031; old_check_in_date: 03-26-2026; new_check_in_date: 2026-03-26; parse_rule: %m-%d-%Y
+- csv_line: 201; booking_id: BK1052; old_check_in_date: 04-11-2026; new_check_in_date: 2026-04-11; parse_rule: %m-%d-%Y
+- csv_line: 202; booking_id: BK1078; old_check_in_date: 14/03/2026; new_check_in_date: 2026-03-14; parse_rule: %d/%m/%Y
+- csv_line: 203; booking_id: BK1189; old_check_in_date: 04-08-2026; new_check_in_date: 2026-04-08; parse_rule: %m-%d-%Y
+- csv_line: 204; booking_id: BK1251; old_check_in_date: 24/05/2026; new_check_in_date: 2026-05-24; parse_rule: %d/%m/%Y
+- csv_line: 210; booking_id: BK1254; old_check_in_date: 05-18-2026; new_check_in_date: 2026-05-18; parse_rule: %m-%d-%Y
+- csv_line: 212; booking_id: BK1011; old_check_in_date: 26 Mar 2026; new_check_in_date: 2026-03-26; parse_rule: %d %b %Y
+- csv_line: 213; booking_id: BK1073; old_check_in_date: 05-10-2026; new_check_in_date: 2026-05-10; parse_rule: %m-%d-%Y
+- csv_line: 214; booking_id: BK1192; old_check_in_date: 23/05/2026; new_check_in_date: 2026-05-23; parse_rule: %d/%m/%Y
+- csv_line: 216; booking_id: BK1009; old_check_in_date: 18 Mar 2026; new_check_in_date: 2026-03-18; parse_rule: %d %b %Y
+- csv_line: 217; booking_id: BK1063; old_check_in_date: 02-16-2026; new_check_in_date: 2026-02-16; parse_rule: %m-%d-%Y
+- csv_line: 219; booking_id: BK1128; old_check_in_date: 21 Mar 2026; new_check_in_date: 2026-03-21; parse_rule: %d %b %Y
+- csv_line: 220; booking_id: BK1108; old_check_in_date: 01-24-2026; new_check_in_date: 2026-01-24; parse_rule: %m-%d-%Y
+- csv_line: 221; booking_id: BK1163; old_check_in_date: 01-03-2026; new_check_in_date: 2026-03-01; parse_rule: %d-%m-%Y
+- csv_line: 223; booking_id: BK1114; old_check_in_date: 25 Mar 2026; new_check_in_date: 2026-03-25; parse_rule: %d %b %Y
+- csv_line: 225; booking_id: BK1288; old_check_in_date: 15 Mar 2026; new_check_in_date: 2026-03-15; parse_rule: %d %b %Y
+- csv_line: 228; booking_id: BK1117; old_check_in_date: 22 Mar 2026; new_check_in_date: 2026-03-22; parse_rule: %d %b %Y
+- csv_line: 229; booking_id: BK1233; old_check_in_date: 5 Mar 2026; new_check_in_date: 2026-03-05; parse_rule: %d %b %Y
+- csv_line: 230; booking_id: BK1255; old_check_in_date: 02-23-2026; new_check_in_date: 2026-02-23; parse_rule: %m-%d-%Y
+- csv_line: 233; booking_id: BK1258; old_check_in_date: 19/02/2026; new_check_in_date: 2026-02-19; parse_rule: %d/%m/%Y
+- csv_line: 234; booking_id: BK1175; old_check_in_date: 7 Mar 2026; new_check_in_date: 2026-03-07; parse_rule: %d %b %Y
+- csv_line: 235; booking_id: BK1260; old_check_in_date: 21 Mar 2026; new_check_in_date: 2026-03-21; parse_rule: %d %b %Y
+- csv_line: 236; booking_id: BK1203; old_check_in_date: 26 Mar 2026; new_check_in_date: 2026-03-26; parse_rule: %d %b %Y
+- csv_line: 237; booking_id: BK1083; old_check_in_date: 9 Mar 2026; new_check_in_date: 2026-03-09; parse_rule: %d %b %Y
+- csv_line: 238; booking_id: BK1169; old_check_in_date: 01-19-2026; new_check_in_date: 2026-01-19; parse_rule: %m-%d-%Y
+
+## Field-Level Standardization and Corrections
+
+- csv_line: 3; booking_id: BK1150; field: property; old: cedar court; new: Cedar Court; rule: standardize_property
+- csv_line: 3; booking_id: BK1150; field: booking_channel; old: direct; new: Direct; rule: standardize_channel
+- csv_line: 3; booking_id: BK1150; field: status; old: CHECKED OUT; new: Checked-out; rule: standardize_status
+- csv_line: 3; booking_id: BK1150; field: check_in_date; old: 9 Mar 2026; new: 2026-03-09; rule: iso_date_conversion
+- csv_line: 4; booking_id: BK1206; field: status; old: CHECKED OUT; new: Checked-out; rule: standardize_status
+- csv_line: 4; booking_id: BK1206; field: check_in_date; old: 02/02/2026; new: 2026-02-02; rule: iso_date_conversion
+- csv_line: 5; booking_id: BK1197; field: booking_channel; old: ota-mmt; new: OTA-MMT; rule: standardize_channel
+- csv_line: 5; booking_id: BK1197; field: check_in_date; old: 03/04/2026; new: 2026-04-03; rule: iso_date_conversion
+- csv_line: 6; booking_id: BK1242; field: property; old: Marigold Suites ; new: Marigold Suites; rule: standardize_property
+- csv_line: 6; booking_id: BK1242; field: status; old: CHECKED OUT; new: Checked-out; rule: standardize_status
+- csv_line: 7; booking_id: BK1118; field: booking_channel; old: ota-mmt; new: OTA-MMT; rule: standardize_channel
+- csv_line: 7; booking_id: BK1118; field: check_in_date; old: 16 Mar 2026; new: 2026-03-16; rule: iso_date_conversion
+- csv_line: 7; booking_id: BK1118; field: total_amount_inr; old: 81750; new: 8175; rule: revenue_formula_correction
+- csv_line: 8; booking_id: BK1177; field: check_in_date; old: 05-11-2026; new: 2026-05-11; rule: iso_date_conversion
+- csv_line: 9; booking_id: BK1025; field: check_in_date; old: 22/02/2026; new: 2026-02-22; rule: iso_date_conversion
+- csv_line: 10; booking_id: BK1101; field: property; old: Palm grove inn; new: Palm Grove Inn; rule: standardize_property
+- csv_line: 10; booking_id: BK1101; field: booking_channel; old: direct; new: Direct; rule: standardize_channel
+- csv_line: 10; booking_id: BK1101; field: check_in_date; old: 01-09-2026; new: 2026-01-09; rule: iso_date_conversion
+- csv_line: 11; booking_id: BK1072; field: property; old: cedar court; new: Cedar Court; rule: standardize_property
+- csv_line: 11; booking_id: BK1072; field: status; old: CHECKED OUT; new: Checked-out; rule: standardize_status
+- csv_line: 11; booking_id: BK1072; field: booking_channel; old: ; new: Unknown; rule: missing_booking_channel
+- csv_line: 12; booking_id: BK1076; field: check_in_date; old: 21 Mar 2026; new: 2026-03-21; rule: iso_date_conversion
+- csv_line: 13; booking_id: BK1247; field: property; old: cedar court; new: Cedar Court; rule: standardize_property
+- csv_line: 13; booking_id: BK1247; field: check_in_date; old: 17 Mar 2026; new: 2026-03-17; rule: iso_date_conversion
+- csv_line: 14; booking_id: BK1207; field: check_in_date; old: 7 Mar 2026; new: 2026-03-07; rule: iso_date_conversion
+- csv_line: 15; booking_id: BK1269; field: status; old: confirmed; new: Confirmed; rule: standardize_status
+- csv_line: 15; booking_id: BK1269; field: check_in_date; old: 21/03/2026; new: 2026-03-21; rule: iso_date_conversion
+- csv_line: 16; booking_id: BK1138; field: booking_channel; old: ota-mmt; new: OTA-MMT; rule: standardize_channel
+- csv_line: 16; booking_id: BK1138; field: check_in_date; old: 05-05-2026; new: 2026-05-05; rule: iso_date_conversion
+- csv_line: 17; booking_id: BK1064; field: property; old: Palm grove inn; new: Palm Grove Inn; rule: standardize_property
+- csv_line: 17; booking_id: BK1064; field: check_in_date; old: 16 Mar 2026; new: 2026-03-16; rule: iso_date_conversion
+- csv_line: 18; booking_id: BK1190; field: check_in_date; old: 03-06-2026; new: 2026-03-06; rule: iso_date_conversion
+- csv_line: 19; booking_id: BK1109; field: property; old: Palm grove inn; new: Palm Grove Inn; rule: standardize_property
+- csv_line: 19; booking_id: BK1109; field: status; old: CHECKED OUT; new: Checked-out; rule: standardize_status
+- csv_line: 19; booking_id: BK1109; field: check_in_date; old: 2 Mar 2026; new: 2026-03-02; rule: iso_date_conversion
+- csv_line: 20; booking_id: BK1246; field: booking_channel; old: ota-mmt; new: OTA-MMT; rule: standardize_channel
+- csv_line: 20; booking_id: BK1246; field: check_in_date; old: 03-12-2026; new: 2026-03-12; rule: iso_date_conversion
+- csv_line: 21; booking_id: BK1248; field: property; old: Palm grove inn; new: Palm Grove Inn; rule: standardize_property
+- csv_line: 21; booking_id: BK1248; field: check_in_date; old: 06/02/2026; new: 2026-02-06; rule: iso_date_conversion
+- csv_line: 21; booking_id: BK1248; field: nightly_rate_inr; old: ; new: 7661; rule: missing_nightly_rate
+- csv_line: 22; booking_id: BK1231; field: status; old: CHECKED OUT; new: Checked-out; rule: standardize_status
+- csv_line: 22; booking_id: BK1231; field: total_amount_inr; old: ; new: 8018; rule: missing_total_amount
+- csv_line: 23; booking_id: BK1036; field: booking_channel; old: ota-mmt; new: OTA-MMT; rule: standardize_channel
+- csv_line: 23; booking_id: BK1036; field: status; old: CHECKED OUT; new: Checked-out; rule: standardize_status
+- csv_line: 23; booking_id: BK1036; field: check_in_date; old: 03-20-2026; new: 2026-03-20; rule: iso_date_conversion
+- csv_line: 24; booking_id: BK1147; field: booking_channel; old: direct; new: Direct; rule: standardize_channel
+- csv_line: 24; booking_id: BK1147; field: check_in_date; old: 18 Mar 2026; new: 2026-03-18; rule: iso_date_conversion
+- csv_line: 25; booking_id: BK1165; field: status; old: CHECKED OUT; new: Checked-out; rule: standardize_status
+- csv_line: 25; booking_id: BK1165; field: check_in_date; old: 03-24-2026; new: 2026-03-24; rule: iso_date_conversion
+- csv_line: 26; booking_id: BK1172; field: property; old: Palm grove inn; new: Palm Grove Inn; rule: standardize_property
+- csv_line: 26; booking_id: BK1172; field: check_in_date; old: 27/04/2026; new: 2026-04-27; rule: iso_date_conversion
+- csv_line: 26; booking_id: BK1172; field: booking_channel; old: ; new: Unknown; rule: missing_booking_channel
+- csv_line: 27; booking_id: BK1087; field: property; old: MARIGOLD SUITES; new: Marigold Suites; rule: standardize_property
+- csv_line: 27; booking_id: BK1087; field: check_in_date; old: 19 Mar 2026; new: 2026-03-19; rule: iso_date_conversion
+- csv_line: 27; booking_id: BK1087; field: booking_channel; old: ; new: Unknown; rule: missing_booking_channel
+- csv_line: 28; booking_id: BK1157; field: booking_channel; old: direct; new: Direct; rule: standardize_channel
+- csv_line: 28; booking_id: BK1157; field: status; old: confirmed; new: Confirmed; rule: standardize_status
+- csv_line: 29; booking_id: BK1225; field: property; old: Palm grove inn; new: Palm Grove Inn; rule: standardize_property
+- csv_line: 29; booking_id: BK1225; field: booking_channel; old: direct; new: Direct; rule: standardize_channel
+- csv_line: 29; booking_id: BK1225; field: check_in_date; old: 04-08-2026; new: 2026-04-08; rule: iso_date_conversion
+- csv_line: 30; booking_id: BK1023; field: status; old: confirmed; new: Confirmed; rule: standardize_status
+- csv_line: 30; booking_id: BK1023; field: check_in_date; old: 17/04/2026; new: 2026-04-17; rule: iso_date_conversion
+- csv_line: 31; booking_id: BK1155; field: check_in_date; old: 11/04/2026; new: 2026-04-11; rule: iso_date_conversion
+- csv_line: 32; booking_id: BK1106; field: status; old: confirmed; new: Confirmed; rule: standardize_status
+- csv_line: 33; booking_id: BK1091; field: property; old: Palm grove inn; new: Palm Grove Inn; rule: standardize_property
+- csv_line: 33; booking_id: BK1091; field: check_in_date; old: 21 Mar 2026; new: 2026-03-21; rule: iso_date_conversion
+- csv_line: 34; booking_id: BK1214; field: booking_channel; old: ota-mmt; new: OTA-MMT; rule: standardize_channel
+- csv_line: 34; booking_id: BK1214; field: status; old: CHECKED OUT; new: Checked-out; rule: standardize_status
+- csv_line: 34; booking_id: BK1214; field: check_in_date; old: 3 Mar 2026; new: 2026-03-03; rule: iso_date_conversion
+- csv_line: 34; booking_id: BK1214; field: total_amount_inr; old: 54460; new: 5446; rule: revenue_formula_correction
+- csv_line: 35; booking_id: BK1274; field: property; old: Palm grove inn; new: Palm Grove Inn; rule: standardize_property
+- csv_line: 35; booking_id: BK1274; field: booking_channel; old: direct; new: Direct; rule: standardize_channel
+- csv_line: 35; booking_id: BK1274; field: check_in_date; old: 06/05/2026; new: 2026-05-06; rule: iso_date_conversion
+- csv_line: 37; booking_id: BK1004; field: property; old: Palm grove inn; new: Palm Grove Inn; rule: standardize_property
+- csv_line: 37; booking_id: BK1004; field: check_in_date; old: 05-07-2026; new: 2026-05-07; rule: iso_date_conversion
+- csv_line: 38; booking_id: BK1058; field: status; old: confirmed; new: Confirmed; rule: standardize_status
+- csv_line: 38; booking_id: BK1058; field: check_in_date; old: 04/02/2026; new: 2026-02-04; rule: iso_date_conversion
+- csv_line: 39; booking_id: BK1168; field: check_in_date; old: 27/05/2026; new: 2026-05-27; rule: iso_date_conversion
+- csv_line: 40; booking_id: BK1102; field: status; old: confirmed; new: Confirmed; rule: standardize_status
+- csv_line: 40; booking_id: BK1102; field: check_in_date; old: 20 Mar 2026; new: 2026-03-20; rule: iso_date_conversion
+- csv_line: 41; booking_id: BK1034; field: booking_channel; old: ota-mmt; new: OTA-MMT; rule: standardize_channel
+- csv_line: 41; booking_id: BK1034; field: check_in_date; old: 01-04-2026; new: 2026-04-01; rule: iso_date_conversion
+- csv_line: 42; booking_id: BK1266; field: booking_channel; old: direct; new: Direct; rule: standardize_channel
+- csv_line: 42; booking_id: BK1266; field: check_in_date; old: 03-21-2026; new: 2026-03-21; rule: iso_date_conversion
+- csv_line: 42; booking_id: BK1266; field: nightly_rate_inr; old: ; new: 3466; rule: missing_nightly_rate
+- csv_line: 43; booking_id: BK1290; field: property; old: MARIGOLD SUITES; new: Marigold Suites; rule: standardize_property
+- csv_line: 43; booking_id: BK1290; field: booking_channel; old: direct; new: Direct; rule: standardize_channel
+- csv_line: 44; booking_id: BK1218; field: property; old: MARIGOLD SUITES; new: Marigold Suites; rule: standardize_property
+- csv_line: 44; booking_id: BK1218; field: status; old: confirmed; new: Confirmed; rule: standardize_status
+- csv_line: 44; booking_id: BK1218; field: check_in_date; old: 02-08-2026; new: 2026-02-08; rule: iso_date_conversion
+- csv_line: 45; booking_id: BK1049; field: property; old: cedar court; new: Cedar Court; rule: standardize_property
+- csv_line: 45; booking_id: BK1049; field: booking_channel; old: ota-mmt; new: OTA-MMT; rule: standardize_channel
+- csv_line: 45; booking_id: BK1049; field: status; old: confirmed; new: Confirmed; rule: standardize_status
+- csv_line: 45; booking_id: BK1049; field: check_in_date; old: 05-26-2026; new: 2026-05-26; rule: iso_date_conversion
+- csv_line: 46; booking_id: BK1134; field: property; old: MARIGOLD SUITES; new: Marigold Suites; rule: standardize_property
+- csv_line: 46; booking_id: BK1134; field: check_in_date; old: 02-08-2026; new: 2026-02-08; rule: iso_date_conversion
+- csv_line: 47; booking_id: BK1256; field: check_in_date; old: 04-03-2026; new: 2026-03-04; rule: iso_date_conversion
+- csv_line: 48; booking_id: BK1044; field: property; old: Palm grove inn; new: Palm Grove Inn; rule: standardize_property
+- csv_line: 48; booking_id: BK1044; field: status; old: CHECKED OUT; new: Checked-out; rule: standardize_status
+- csv_line: 48; booking_id: BK1044; field: check_in_date; old: 04-15-2026; new: 2026-04-15; rule: iso_date_conversion
+- csv_line: 48; booking_id: BK1044; field: booking_channel; old: ; new: Unknown; rule: missing_booking_channel
+- csv_line: 49; booking_id: BK1099; field: property; old: Palm grove inn; new: Palm Grove Inn; rule: standardize_property
+- csv_line: 49; booking_id: BK1099; field: check_in_date; old: 26/04/2026; new: 2026-04-26; rule: iso_date_conversion
+- csv_line: 50; booking_id: BK1272; field: property; old: MARIGOLD SUITES; new: Marigold Suites; rule: standardize_property
+- csv_line: 50; booking_id: BK1272; field: check_in_date; old: 26/03/2026; new: 2026-03-26; rule: iso_date_conversion
+- csv_line: 51; booking_id: BK1089; field: property; old: MARIGOLD SUITES; new: Marigold Suites; rule: standardize_property
+- csv_line: 51; booking_id: BK1089; field: check_in_date; old: 03-20-2026; new: 2026-03-20; rule: iso_date_conversion
+- csv_line: 52; booking_id: BK1030; field: booking_channel; old: direct; new: Direct; rule: standardize_channel
+- csv_line: 52; booking_id: BK1030; field: status; old: CHECKED OUT; new: Checked-out; rule: standardize_status
+- csv_line: 52; booking_id: BK1030; field: check_in_date; old: 22 Mar 2026; new: 2026-03-22; rule: iso_date_conversion
+- csv_line: 53; booking_id: BK1014; field: status; old: confirmed; new: Confirmed; rule: standardize_status
+- csv_line: 54; booking_id: BK1151; field: status; old: confirmed; new: Confirmed; rule: standardize_status
+- csv_line: 54; booking_id: BK1151; field: check_in_date; old: 26/03/2026; new: 2026-03-26; rule: iso_date_conversion
+- csv_line: 54; booking_id: BK1151; field: booking_channel; old: ; new: Unknown; rule: missing_booking_channel
+- csv_line: 55; booking_id: BK1082; field: check_in_date; old: 17 Mar 2026; new: 2026-03-17; rule: iso_date_conversion
+- csv_line: 56; booking_id: BK1142; field: property; old: MARIGOLD SUITES; new: Marigold Suites; rule: standardize_property
+- csv_line: 56; booking_id: BK1142; field: check_in_date; old: 25/02/2026; new: 2026-02-25; rule: iso_date_conversion
+- csv_line: 57; booking_id: BK1199; field: booking_channel; old: ota-mmt; new: OTA-MMT; rule: standardize_channel
+- csv_line: 57; booking_id: BK1199; field: check_in_date; old: 7 Mar 2026; new: 2026-03-07; rule: iso_date_conversion
+- csv_line: 58; booking_id: BK1085; field: booking_channel; old: direct; new: Direct; rule: standardize_channel
+- csv_line: 58; booking_id: BK1085; field: status; old: CHECKED OUT; new: Checked-out; rule: standardize_status
+- csv_line: 58; booking_id: BK1085; field: check_in_date; old: 19/02/2026; new: 2026-02-19; rule: iso_date_conversion
+- csv_line: 59; booking_id: BK1282; field: check_in_date; old: 15/02/2026; new: 2026-02-15; rule: iso_date_conversion
+- csv_line: 60; booking_id: BK1178; field: check_in_date; old: 03-18-2026; new: 2026-03-18; rule: iso_date_conversion
+- csv_line: 60; booking_id: BK1178; field: booking_channel; old: ; new: Unknown; rule: missing_booking_channel
+- csv_line: 61; booking_id: BK1003; field: property; old: Marigold Suites ; new: Marigold Suites; rule: standardize_property
+- csv_line: 61; booking_id: BK1003; field: check_in_date; old: 28/03/2026; new: 2026-03-28; rule: iso_date_conversion
+- csv_line: 62; booking_id: BK1071; field: property; old: cedar court; new: Cedar Court; rule: standardize_property
+- csv_line: 62; booking_id: BK1071; field: check_in_date; old: 18 Mar 2026; new: 2026-03-18; rule: iso_date_conversion
+- csv_line: 63; booking_id: BK1195; field: booking_channel; old: ota-mmt; new: OTA-MMT; rule: standardize_channel
+- csv_line: 63; booking_id: BK1195; field: status; old: CHECKED OUT; new: Checked-out; rule: standardize_status
+- csv_line: 63; booking_id: BK1195; field: check_in_date; old: 18/01/2026; new: 2026-01-18; rule: iso_date_conversion
+- csv_line: 64; booking_id: BK1145; field: property; old: MARIGOLD SUITES; new: Marigold Suites; rule: standardize_property
+- csv_line: 65; booking_id: BK1193; field: property; old: MARIGOLD SUITES; new: Marigold Suites; rule: standardize_property
+- csv_line: 65; booking_id: BK1193; field: booking_channel; old: direct; new: Direct; rule: standardize_channel
+- csv_line: 65; booking_id: BK1193; field: check_in_date; old: 22 Mar 2026; new: 2026-03-22; rule: iso_date_conversion
+- csv_line: 66; booking_id: BK1026; field: property; old: Palm grove inn; new: Palm Grove Inn; rule: standardize_property
+- csv_line: 66; booking_id: BK1026; field: check_in_date; old: 02-12-2026; new: 2026-02-12; rule: iso_date_conversion
+- csv_line: 68; booking_id: BK1250; field: property; old: Palm grove inn; new: Palm Grove Inn; rule: standardize_property
+- csv_line: 68; booking_id: BK1250; field: status; old: CHECKED OUT; new: Checked-out; rule: standardize_status
+- csv_line: 68; booking_id: BK1250; field: check_in_date; old: 14/04/2026; new: 2026-04-14; rule: iso_date_conversion
+- csv_line: 68; booking_id: BK1250; field: booking_channel; old: ; new: Unknown; rule: missing_booking_channel
+- csv_line: 68; booking_id: BK1250; field: total_amount_inr; old: -28497; new: 28497; rule: revenue_formula_correction
+- csv_line: 70; booking_id: BK1094; field: check_in_date; old: 15 Mar 2026; new: 2026-03-15; rule: iso_date_conversion
+- csv_line: 71; booking_id: BK1152; field: property; old: Marigold Suites ; new: Marigold Suites; rule: standardize_property
+- csv_line: 71; booking_id: BK1152; field: status; old: CHECKED OUT; new: Checked-out; rule: standardize_status
+- csv_line: 73; booking_id: BK1131; field: property; old: Marigold Suites ; new: Marigold Suites; rule: standardize_property
+- csv_line: 73; booking_id: BK1131; field: booking_channel; old: direct; new: Direct; rule: standardize_channel
+- csv_line: 73; booking_id: BK1131; field: status; old: confirmed; new: Confirmed; rule: standardize_status
+- csv_line: 73; booking_id: BK1131; field: check_in_date; old: 04-10-2026; new: 2026-04-10; rule: iso_date_conversion
+- csv_line: 74; booking_id: BK1069; field: status; old: confirmed; new: Confirmed; rule: standardize_status
+- csv_line: 74; booking_id: BK1069; field: check_in_date; old: 01-05-2026; new: 2026-05-01; rule: iso_date_conversion
+- csv_line: 74; booking_id: BK1069; field: booking_channel; old: ; new: Unknown; rule: missing_booking_channel
+- csv_line: 75; booking_id: BK1120; field: property; old: Marigold Suites ; new: Marigold Suites; rule: standardize_property
+- csv_line: 75; booking_id: BK1120; field: booking_channel; old: ota-mmt; new: OTA-MMT; rule: standardize_channel
+- csv_line: 75; booking_id: BK1120; field: check_in_date; old: 15 Mar 2026; new: 2026-03-15; rule: iso_date_conversion
+- csv_line: 76; booking_id: BK1070; field: property; old: Palm grove inn; new: Palm Grove Inn; rule: standardize_property
+- csv_line: 76; booking_id: BK1070; field: booking_channel; old: ota-mmt; new: OTA-MMT; rule: standardize_channel
+- csv_line: 76; booking_id: BK1070; field: check_in_date; old: 28/03/2026; new: 2026-03-28; rule: iso_date_conversion
+- csv_line: 78; booking_id: BK1066; field: booking_channel; old: direct; new: Direct; rule: standardize_channel
+- csv_line: 78; booking_id: BK1066; field: status; old: CHECKED OUT; new: Checked-out; rule: standardize_status
+- csv_line: 78; booking_id: BK1066; field: check_in_date; old: 25 Mar 2026; new: 2026-03-25; rule: iso_date_conversion
+- csv_line: 79; booking_id: BK1271; field: property; old: cedar court; new: Cedar Court; rule: standardize_property
+- csv_line: 79; booking_id: BK1271; field: check_in_date; old: 02-23-2026; new: 2026-02-23; rule: iso_date_conversion
+- csv_line: 80; booking_id: BK1153; field: booking_channel; old: ota-mmt; new: OTA-MMT; rule: standardize_channel
+- csv_line: 80; booking_id: BK1153; field: status; old: CHECKED OUT; new: Checked-out; rule: standardize_status
+- csv_line: 81; booking_id: BK1149; field: check_in_date; old: 2 Mar 2026; new: 2026-03-02; rule: iso_date_conversion
+- csv_line: 82; booking_id: BK1040; field: property; old: Marigold Suites ; new: Marigold Suites; rule: standardize_property
+- csv_line: 82; booking_id: BK1040; field: check_in_date; old: 5 Mar 2026; new: 2026-03-05; rule: iso_date_conversion
+- csv_line: 83; booking_id: BK1162; field: property; old: Marigold Suites ; new: Marigold Suites; rule: standardize_property
+- csv_line: 83; booking_id: BK1162; field: status; old: CHECKED OUT; new: Checked-out; rule: standardize_status
+- csv_line: 83; booking_id: BK1162; field: check_in_date; old: 09/05/2026; new: 2026-05-09; rule: iso_date_conversion
+- csv_line: 84; booking_id: BK1012; field: property; old: Marigold Suites ; new: Marigold Suites; rule: standardize_property
+- csv_line: 84; booking_id: BK1012; field: check_in_date; old: 03-14-2026; new: 2026-03-14; rule: iso_date_conversion
+- csv_line: 85; booking_id: BK1039; field: booking_channel; old: direct; new: Direct; rule: standardize_channel
+- csv_line: 88; booking_id: BK1002; field: property; old: Palm grove inn; new: Palm Grove Inn; rule: standardize_property
+- csv_line: 89; booking_id: BK1164; field: check_in_date; old: 26/02/2026; new: 2026-02-26; rule: iso_date_conversion
+- csv_line: 89; booking_id: BK1164; field: total_amount_inr; old: 183200; new: 18320; rule: revenue_formula_correction
+- csv_line: 90; booking_id: BK1129; field: status; old: confirmed; new: Confirmed; rule: standardize_status
+- csv_line: 90; booking_id: BK1129; field: check_in_date; old: 17/04/2026; new: 2026-04-17; rule: iso_date_conversion
+- csv_line: 92; booking_id: BK1111; field: property; old: Palm grove inn; new: Palm Grove Inn; rule: standardize_property
+- csv_line: 92; booking_id: BK1111; field: check_in_date; old: 14 Mar 2026; new: 2026-03-14; rule: iso_date_conversion
+- csv_line: 93; booking_id: BK1226; field: booking_channel; old: ota-mmt; new: OTA-MMT; rule: standardize_channel
+- csv_line: 95; booking_id: BK1135; field: check_in_date; old: 6 Mar 2026; new: 2026-03-06; rule: iso_date_conversion
+- csv_line: 96; booking_id: BK1027; field: property; old: Palm grove inn; new: Palm Grove Inn; rule: standardize_property
+- csv_line: 97; booking_id: BK1141; field: booking_channel; old: ota-mmt; new: OTA-MMT; rule: standardize_channel
+- csv_line: 97; booking_id: BK1141; field: check_in_date; old: 13/02/2026; new: 2026-02-13; rule: iso_date_conversion
+- csv_line: 98; booking_id: BK1277; field: check_in_date; old: 11/03/2026; new: 2026-03-11; rule: iso_date_conversion
+- csv_line: 99; booking_id: BK1037; field: property; old: Palm grove inn; new: Palm Grove Inn; rule: standardize_property
+- csv_line: 99; booking_id: BK1037; field: check_in_date; old: 04-22-2026; new: 2026-04-22; rule: iso_date_conversion
+- csv_line: 99; booking_id: BK1037; field: nightly_rate_inr; old: ; new: 5782; rule: missing_nightly_rate
+- csv_line: 100; booking_id: BK1210; field: check_in_date; old: 02/04/2026; new: 2026-04-02; rule: iso_date_conversion
+- csv_line: 101; booking_id: BK1179; field: property; old: Palm grove inn; new: Palm Grove Inn; rule: standardize_property
+- csv_line: 101; booking_id: BK1179; field: total_amount_inr; old: -21265; new: 21265; rule: revenue_formula_correction
+- csv_line: 102; booking_id: BK1056; field: property; old: Marigold Suites ; new: Marigold Suites; rule: standardize_property
+- csv_line: 102; booking_id: BK1056; field: status; old: CHECKED OUT; new: Checked-out; rule: standardize_status
+- csv_line: 102; booking_id: BK1056; field: nightly_rate_inr; old: ; new: 3017; rule: missing_nightly_rate
+- csv_line: 103; booking_id: BK1181; field: property; old: cedar court; new: Cedar Court; rule: standardize_property
+- csv_line: 103; booking_id: BK1181; field: booking_channel; old: ; new: Unknown; rule: missing_booking_channel
+- csv_line: 103; booking_id: BK1181; field: total_amount_inr; old: 90330; new: 9033; rule: revenue_formula_correction
+- csv_line: 104; booking_id: BK1252; field: property; old: Palm grove inn; new: Palm Grove Inn; rule: standardize_property
+- csv_line: 104; booking_id: BK1252; field: status; old: confirmed; new: Confirmed; rule: standardize_status
+- csv_line: 104; booking_id: BK1252; field: check_in_date; old: 02-14-2026; new: 2026-02-14; rule: iso_date_conversion
+- csv_line: 105; booking_id: BK1019; field: check_in_date; old: 4 Mar 2026; new: 2026-03-04; rule: iso_date_conversion
+- csv_line: 105; booking_id: BK1019; field: booking_channel; old: ; new: Unknown; rule: missing_booking_channel
+- csv_line: 106; booking_id: BK1146; field: status; old: CHECKED OUT; new: Checked-out; rule: standardize_status
+- csv_line: 106; booking_id: BK1146; field: check_in_date; old: 04-12-2026; new: 2026-04-12; rule: iso_date_conversion
+- csv_line: 106; booking_id: BK1146; field: booking_channel; old: ; new: Unknown; rule: missing_booking_channel
+- csv_line: 106; booking_id: BK1146; field: total_amount_inr; old: 195480; new: 19548; rule: revenue_formula_correction
+- csv_line: 107; booking_id: BK1167; field: status; old: confirmed; new: Confirmed; rule: standardize_status
+- csv_line: 107; booking_id: BK1167; field: check_in_date; old: 16/04/2026; new: 2026-04-16; rule: iso_date_conversion
+- csv_line: 108; booking_id: BK1184; field: check_in_date; old: 04-06-2026; new: 2026-04-06; rule: iso_date_conversion
+- csv_line: 109; booking_id: BK1104; field: status; old: confirmed; new: Confirmed; rule: standardize_status
+- csv_line: 111; booking_id: BK1285; field: property; old: cedar court; new: Cedar Court; rule: standardize_property
+- csv_line: 112; booking_id: BK1216; field: status; old: confirmed; new: Confirmed; rule: standardize_status
+- csv_line: 112; booking_id: BK1216; field: check_in_date; old: 05-14-2026; new: 2026-05-14; rule: iso_date_conversion
+- csv_line: 112; booking_id: BK1216; field: nightly_rate_inr; old: ; new: 3042; rule: missing_nightly_rate
+- csv_line: 113; booking_id: BK1208; field: property; old: Palm grove inn; new: Palm Grove Inn; rule: standardize_property
+- csv_line: 113; booking_id: BK1208; field: booking_channel; old: direct; new: Direct; rule: standardize_channel
+- csv_line: 113; booking_id: BK1208; field: check_in_date; old: 04-18-2026; new: 2026-04-18; rule: iso_date_conversion
+- csv_line: 114; booking_id: BK1028; field: property; old: Palm grove inn; new: Palm Grove Inn; rule: standardize_property
+- csv_line: 114; booking_id: BK1028; field: check_in_date; old: 21/01/2026; new: 2026-01-21; rule: iso_date_conversion
+- csv_line: 114; booking_id: BK1028; field: booking_channel; old: ; new: Unknown; rule: missing_booking_channel
+- csv_line: 115; booking_id: BK1097; field: check_in_date; old: 05-26-2026; new: 2026-05-26; rule: iso_date_conversion
+- csv_line: 115; booking_id: BK1097; field: booking_channel; old: ; new: Unknown; rule: missing_booking_channel
+- csv_line: 116; booking_id: BK1126; field: booking_channel; old: direct; new: Direct; rule: standardize_channel
+- csv_line: 116; booking_id: BK1126; field: check_in_date; old: 04-03-2026; new: 2026-03-04; rule: iso_date_conversion
+- csv_line: 116; booking_id: BK1126; field: total_amount_inr; old: 294700; new: 29470; rule: revenue_formula_correction
+- csv_line: 117; booking_id: BK1139; field: property; old: cedar court; new: Cedar Court; rule: standardize_property
+- csv_line: 117; booking_id: BK1139; field: check_in_date; old: 17/04/2026; new: 2026-04-17; rule: iso_date_conversion
+- csv_line: 118; booking_id: BK1067; field: property; old: Marigold Suites ; new: Marigold Suites; rule: standardize_property
+- csv_line: 118; booking_id: BK1067; field: total_amount_inr; old: -9138; new: 9138; rule: revenue_formula_correction
+- csv_line: 119; booking_id: BK1098; field: property; old: Marigold Suites ; new: Marigold Suites; rule: standardize_property
+- csv_line: 119; booking_id: BK1098; field: check_in_date; old: 19/01/2026; new: 2026-01-19; rule: iso_date_conversion
+- csv_line: 120; booking_id: BK1115; field: check_in_date; old: 23/03/2026; new: 2026-03-23; rule: iso_date_conversion
+- csv_line: 122; booking_id: BK1211; field: property; old: MARIGOLD SUITES; new: Marigold Suites; rule: standardize_property
+- csv_line: 122; booking_id: BK1211; field: check_in_date; old: 04-19-2026; new: 2026-04-19; rule: iso_date_conversion
+- csv_line: 124; booking_id: BK1022; field: property; old: MARIGOLD SUITES; new: Marigold Suites; rule: standardize_property
+- csv_line: 124; booking_id: BK1022; field: booking_channel; old: ota-mmt; new: OTA-MMT; rule: standardize_channel
+- csv_line: 124; booking_id: BK1022; field: check_in_date; old: 26 Mar 2026; new: 2026-03-26; rule: iso_date_conversion
+- csv_line: 125; booking_id: BK1187; field: status; old: CHECKED OUT; new: Checked-out; rule: standardize_status
+- csv_line: 125; booking_id: BK1187; field: check_in_date; old: 02-06-2026; new: 2026-02-06; rule: iso_date_conversion
+- csv_line: 126; booking_id: BK1279; field: status; old: CHECKED OUT; new: Checked-out; rule: standardize_status
+- csv_line: 126; booking_id: BK1279; field: check_in_date; old: 4 Mar 2026; new: 2026-03-04; rule: iso_date_conversion
+- csv_line: 127; booking_id: BK1221; field: property; old: Marigold Suites ; new: Marigold Suites; rule: standardize_property
+- csv_line: 127; booking_id: BK1221; field: status; old: CHECKED OUT; new: Checked-out; rule: standardize_status
+- csv_line: 127; booking_id: BK1221; field: booking_channel; old: ; new: Unknown; rule: missing_booking_channel
+- csv_line: 128; booking_id: BK1051; field: property; old: MARIGOLD SUITES; new: Marigold Suites; rule: standardize_property
+- csv_line: 128; booking_id: BK1051; field: status; old: confirmed; new: Confirmed; rule: standardize_status
+- csv_line: 128; booking_id: BK1051; field: check_in_date; old: 01/05/2026; new: 2026-05-01; rule: iso_date_conversion
+- csv_line: 128; booking_id: BK1051; field: booking_channel; old: ; new: Unknown; rule: missing_booking_channel
+- csv_line: 131; booking_id: BK1075; field: property; old: Marigold Suites ; new: Marigold Suites; rule: standardize_property
+- csv_line: 131; booking_id: BK1075; field: status; old: CHECKED OUT; new: Checked-out; rule: standardize_status
+- csv_line: 133; booking_id: BK1257; field: status; old: CHECKED OUT; new: Checked-out; rule: standardize_status
+- csv_line: 133; booking_id: BK1257; field: check_in_date; old: 21 Mar 2026; new: 2026-03-21; rule: iso_date_conversion
+- csv_line: 134; booking_id: BK1286; field: check_in_date; old: 04-12-2026; new: 2026-04-12; rule: iso_date_conversion
+- csv_line: 135; booking_id: BK1280; field: property; old: Marigold Suites ; new: Marigold Suites; rule: standardize_property
+- csv_line: 135; booking_id: BK1280; field: status; old: confirmed; new: Confirmed; rule: standardize_status
+- csv_line: 135; booking_id: BK1280; field: check_in_date; old: 23/04/2026; new: 2026-04-23; rule: iso_date_conversion
+- csv_line: 136; booking_id: BK1144; field: property; old: Marigold Suites ; new: Marigold Suites; rule: standardize_property
+- csv_line: 136; booking_id: BK1144; field: check_in_date; old: 02/01/2026; new: 2026-01-02; rule: iso_date_conversion
+- csv_line: 137; booking_id: BK1265; field: check_in_date; old: 22/05/2026; new: 2026-05-22; rule: iso_date_conversion
+- csv_line: 138; booking_id: BK1042; field: property; old: Palm grove inn; new: Palm Grove Inn; rule: standardize_property
+- csv_line: 138; booking_id: BK1042; field: check_in_date; old: 02-26-2026; new: 2026-02-26; rule: iso_date_conversion
+- csv_line: 139; booking_id: BK1229; field: property; old: Marigold Suites ; new: Marigold Suites; rule: standardize_property
+- csv_line: 139; booking_id: BK1229; field: check_in_date; old: 03/05/2026; new: 2026-05-03; rule: iso_date_conversion
+- csv_line: 140; booking_id: BK1103; field: property; old: cedar court; new: Cedar Court; rule: standardize_property
+- csv_line: 140; booking_id: BK1103; field: check_in_date; old: 02-18-2026; new: 2026-02-18; rule: iso_date_conversion
+- csv_line: 140; booking_id: BK1103; field: booking_channel; old: ; new: Unknown; rule: missing_booking_channel
+- csv_line: 141; booking_id: BK1112; field: check_in_date; old: 27/01/2026; new: 2026-01-27; rule: iso_date_conversion
+- csv_line: 143; booking_id: BK1130; field: check_in_date; old: 05-17-2026; new: 2026-05-17; rule: iso_date_conversion
+- csv_line: 144; booking_id: BK1122; field: booking_channel; old: direct; new: Direct; rule: standardize_channel
+- csv_line: 144; booking_id: BK1122; field: status; old: confirmed; new: Confirmed; rule: standardize_status
+- csv_line: 144; booking_id: BK1122; field: check_in_date; old: 27/04/2026; new: 2026-04-27; rule: iso_date_conversion
+- csv_line: 145; booking_id: BK1024; field: check_in_date; old: 20 Mar 2026; new: 2026-03-20; rule: iso_date_conversion
+- csv_line: 146; booking_id: BK1119; field: property; old: cedar court; new: Cedar Court; rule: standardize_property
+- csv_line: 146; booking_id: BK1119; field: check_in_date; old: 16 Mar 2026; new: 2026-03-16; rule: iso_date_conversion
+- csv_line: 147; booking_id: BK1200; field: status; old: confirmed; new: Confirmed; rule: standardize_status
+- csv_line: 147; booking_id: BK1200; field: check_in_date; old: 02-25-2026; new: 2026-02-25; rule: iso_date_conversion
+- csv_line: 147; booking_id: BK1200; field: booking_channel; old: ; new: Unknown; rule: missing_booking_channel
+- csv_line: 148; booking_id: BK1035; field: status; old: confirmed; new: Confirmed; rule: standardize_status
+- csv_line: 148; booking_id: BK1035; field: check_in_date; old: 09/02/2026; new: 2026-02-09; rule: iso_date_conversion
+- csv_line: 149; booking_id: BK1222; field: status; old: confirmed; new: Confirmed; rule: standardize_status
+- csv_line: 149; booking_id: BK1222; field: check_in_date; old: 22/05/2026; new: 2026-05-22; rule: iso_date_conversion
+- csv_line: 150; booking_id: BK1048; field: check_in_date; old: 27/02/2026; new: 2026-02-27; rule: iso_date_conversion
+- csv_line: 150; booking_id: BK1048; field: booking_channel; old: ; new: Unknown; rule: missing_booking_channel
+- csv_line: 151; booking_id: BK1201; field: status; old: CHECKED OUT; new: Checked-out; rule: standardize_status
+- csv_line: 151; booking_id: BK1201; field: check_in_date; old: 08/05/2026; new: 2026-05-08; rule: iso_date_conversion
+- csv_line: 152; booking_id: BK1021; field: status; old: CHECKED OUT; new: Checked-out; rule: standardize_status
+- csv_line: 153; booking_id: BK1276; field: status; old: CHECKED OUT; new: Checked-out; rule: standardize_status
+- csv_line: 153; booking_id: BK1276; field: check_in_date; old: 09/03/2026; new: 2026-03-09; rule: iso_date_conversion
+- csv_line: 154; booking_id: BK1238; field: status; old: confirmed; new: Confirmed; rule: standardize_status
+- csv_line: 154; booking_id: BK1238; field: check_in_date; old: 19 Mar 2026; new: 2026-03-19; rule: iso_date_conversion
+- csv_line: 154; booking_id: BK1238; field: total_amount_inr; old: -28590; new: 28590; rule: revenue_formula_correction
+- csv_line: 155; booking_id: BK1113; field: property; old: Marigold Suites ; new: Marigold Suites; rule: standardize_property
+- csv_line: 155; booking_id: BK1113; field: booking_channel; old: ota-mmt; new: OTA-MMT; rule: standardize_channel
+- csv_line: 155; booking_id: BK1113; field: status; old: CHECKED OUT; new: Checked-out; rule: standardize_status
+- csv_line: 155; booking_id: BK1113; field: check_in_date; old: 04-28-2026; new: 2026-04-28; rule: iso_date_conversion
+- csv_line: 156; booking_id: BK1041; field: check_in_date; old: 21 Mar 2026; new: 2026-03-21; rule: iso_date_conversion
+- csv_line: 156; booking_id: BK1041; field: booking_channel; old: ; new: Unknown; rule: missing_booking_channel
+- csv_line: 157; booking_id: BK1068; field: status; old: confirmed; new: Confirmed; rule: standardize_status
+- csv_line: 158; booking_id: BK1110; field: check_in_date; old: 03-20-2026; new: 2026-03-20; rule: iso_date_conversion
+- csv_line: 159; booking_id: BK1001; field: property; old: Marigold Suites ; new: Marigold Suites; rule: standardize_property
+- csv_line: 159; booking_id: BK1001; field: check_in_date; old: 05/02/2026; new: 2026-02-05; rule: iso_date_conversion
+- csv_line: 159; booking_id: BK1001; field: nightly_rate_inr; old: ; new: 7058; rule: missing_nightly_rate
+- csv_line: 160; booking_id: BK1284; field: property; old: cedar court; new: Cedar Court; rule: standardize_property
+- csv_line: 162; booking_id: BK1007; field: check_in_date; old: 03-13-2026; new: 2026-03-13; rule: iso_date_conversion
+- csv_line: 163; booking_id: BK1243; field: status; old: CHECKED OUT; new: Checked-out; rule: standardize_status
+- csv_line: 163; booking_id: BK1243; field: check_in_date; old: 13 Mar 2026; new: 2026-03-13; rule: iso_date_conversion
+- csv_line: 163; booking_id: BK1243; field: nightly_rate_inr; old: ; new: 6702; rule: missing_nightly_rate
+- csv_line: 164; booking_id: BK1194; field: property; old: Palm grove inn; new: Palm Grove Inn; rule: standardize_property
+- csv_line: 164; booking_id: BK1194; field: booking_channel; old: ota-mmt; new: OTA-MMT; rule: standardize_channel
+- csv_line: 164; booking_id: BK1194; field: status; old: confirmed; new: Confirmed; rule: standardize_status
+- csv_line: 164; booking_id: BK1194; field: check_in_date; old: 18/01/2026; new: 2026-01-18; rule: iso_date_conversion
+- csv_line: 164; booking_id: BK1194; field: nightly_rate_inr; old: ; new: 6815; rule: missing_nightly_rate
+- csv_line: 165; booking_id: BK1281; field: check_in_date; old: 03-28-2026; new: 2026-03-28; rule: iso_date_conversion
+- csv_line: 166; booking_id: BK1244; field: property; old: Marigold Suites ; new: Marigold Suites; rule: standardize_property
+- csv_line: 166; booking_id: BK1244; field: check_in_date; old: 03-11-2026; new: 2026-03-11; rule: iso_date_conversion
+- csv_line: 167; booking_id: BK1029; field: booking_channel; old: ota-mmt; new: OTA-MMT; rule: standardize_channel
+- csv_line: 167; booking_id: BK1029; field: check_in_date; old: 01-03-2026; new: 2026-03-01; rule: iso_date_conversion
+- csv_line: 168; booking_id: BK1013; field: property; old: Palm grove inn; new: Palm Grove Inn; rule: standardize_property
+- csv_line: 168; booking_id: BK1013; field: check_in_date; old: 18 Mar 2026; new: 2026-03-18; rule: iso_date_conversion
+- csv_line: 169; booking_id: BK1160; field: property; old: Palm grove inn; new: Palm Grove Inn; rule: standardize_property
+- csv_line: 169; booking_id: BK1160; field: booking_channel; old: ota-mmt; new: OTA-MMT; rule: standardize_channel
+- csv_line: 169; booking_id: BK1160; field: status; old: confirmed; new: Confirmed; rule: standardize_status
+- csv_line: 169; booking_id: BK1160; field: check_in_date; old: 5 Mar 2026; new: 2026-03-05; rule: iso_date_conversion
+- csv_line: 170; booking_id: BK1239; field: property; old: Marigold Suites ; new: Marigold Suites; rule: standardize_property
+- csv_line: 170; booking_id: BK1239; field: check_in_date; old: 2 Mar 2026; new: 2026-03-02; rule: iso_date_conversion
+- csv_line: 170; booking_id: BK1239; field: total_amount_inr; old: ; new: 37695; rule: missing_total_amount
+- csv_line: 171; booking_id: BK1105; field: property; old: Palm grove inn; new: Palm Grove Inn; rule: standardize_property
+- csv_line: 171; booking_id: BK1105; field: booking_channel; old: direct; new: Direct; rule: standardize_channel
+- csv_line: 171; booking_id: BK1105; field: check_in_date; old: 07/03/2026; new: 2026-03-07; rule: iso_date_conversion
+- csv_line: 172; booking_id: BK1173; field: status; old: CHECKED OUT; new: Checked-out; rule: standardize_status
+- csv_line: 172; booking_id: BK1173; field: check_in_date; old: 19 Mar 2026; new: 2026-03-19; rule: iso_date_conversion
+- csv_line: 172; booking_id: BK1173; field: booking_channel; old: ; new: Unknown; rule: missing_booking_channel
+- csv_line: 173; booking_id: BK1161; field: property; old: MARIGOLD SUITES; new: Marigold Suites; rule: standardize_property
+- csv_line: 173; booking_id: BK1161; field: booking_channel; old: ota-mmt; new: OTA-MMT; rule: standardize_channel
+- csv_line: 174; booking_id: BK1065; field: property; old: cedar court; new: Cedar Court; rule: standardize_property
+- csv_line: 174; booking_id: BK1065; field: booking_channel; old: direct; new: Direct; rule: standardize_channel
+- csv_line: 174; booking_id: BK1065; field: status; old: confirmed; new: Confirmed; rule: standardize_status
+- csv_line: 174; booking_id: BK1065; field: check_in_date; old: 05-12-2026; new: 2026-05-12; rule: iso_date_conversion
+- csv_line: 175; booking_id: BK1224; field: property; old: Marigold Suites ; new: Marigold Suites; rule: standardize_property
+- csv_line: 175; booking_id: BK1224; field: status; old: confirmed; new: Confirmed; rule: standardize_status
+- csv_line: 175; booking_id: BK1224; field: check_in_date; old: 02-19-2026; new: 2026-02-19; rule: iso_date_conversion
+- csv_line: 176; booking_id: BK1046; field: property; old: Marigold Suites ; new: Marigold Suites; rule: standardize_property
+- csv_line: 177; booking_id: BK1278; field: booking_channel; old: direct; new: Direct; rule: standardize_channel
+- csv_line: 177; booking_id: BK1278; field: check_in_date; old: 24 Mar 2026; new: 2026-03-24; rule: iso_date_conversion
+- csv_line: 178; booking_id: BK1183; field: property; old: cedar court; new: Cedar Court; rule: standardize_property
+- csv_line: 178; booking_id: BK1183; field: booking_channel; old: direct; new: Direct; rule: standardize_channel
+- csv_line: 178; booking_id: BK1183; field: status; old: CHECKED OUT; new: Checked-out; rule: standardize_status
+- csv_line: 179; booking_id: BK1240; field: booking_channel; old: direct; new: Direct; rule: standardize_channel
+- csv_line: 179; booking_id: BK1240; field: check_in_date; old: 23 Mar 2026; new: 2026-03-23; rule: iso_date_conversion
+- csv_line: 180; booking_id: BK1267; field: check_in_date; old: 26/01/2026; new: 2026-01-26; rule: iso_date_conversion
+- csv_line: 182; booking_id: BK1096; field: check_in_date; old: 12/05/2026; new: 2026-05-12; rule: iso_date_conversion
+- csv_line: 183; booking_id: BK1227; field: booking_channel; old: direct; new: Direct; rule: standardize_channel
+- csv_line: 183; booking_id: BK1227; field: check_in_date; old: 01-01-2026; new: 2026-01-01; rule: iso_date_conversion
+- csv_line: 184; booking_id: BK1270; field: property; old: Marigold Suites ; new: Marigold Suites; rule: standardize_property
+- csv_line: 184; booking_id: BK1270; field: status; old: confirmed; new: Confirmed; rule: standardize_status
+- csv_line: 185; booking_id: BK1191; field: check_in_date; old: 24 Mar 2026; new: 2026-03-24; rule: iso_date_conversion
+- csv_line: 186; booking_id: BK1080; field: property; old: Palm grove inn; new: Palm Grove Inn; rule: standardize_property
+- csv_line: 186; booking_id: BK1080; field: check_in_date; old: 2 Mar 2026; new: 2026-03-02; rule: iso_date_conversion
+- csv_line: 187; booking_id: BK1061; field: booking_channel; old: ota-mmt; new: OTA-MMT; rule: standardize_channel
+- csv_line: 187; booking_id: BK1061; field: check_in_date; old: 03-28-2026; new: 2026-03-28; rule: iso_date_conversion
+- csv_line: 188; booking_id: BK1059; field: booking_channel; old: ota-mmt; new: OTA-MMT; rule: standardize_channel
+- csv_line: 188; booking_id: BK1059; field: check_in_date; old: 12 Mar 2026; new: 2026-03-12; rule: iso_date_conversion
+- csv_line: 189; booking_id: BK1116; field: check_in_date; old: 04-14-2026; new: 2026-04-14; rule: iso_date_conversion
+- csv_line: 190; booking_id: BK1275; field: check_in_date; old: 12/04/2026; new: 2026-04-12; rule: iso_date_conversion
+- csv_line: 191; booking_id: BK1186; field: property; old: Palm grove inn; new: Palm Grove Inn; rule: standardize_property
+- csv_line: 191; booking_id: BK1186; field: status; old: confirmed; new: Confirmed; rule: standardize_status
+- csv_line: 191; booking_id: BK1186; field: check_in_date; old: 04-09-2026; new: 2026-04-09; rule: iso_date_conversion
+- csv_line: 191; booking_id: BK1186; field: booking_channel; old: ; new: Unknown; rule: missing_booking_channel
+- csv_line: 193; booking_id: BK1261; field: property; old: MARIGOLD SUITES; new: Marigold Suites; rule: standardize_property
+- csv_line: 193; booking_id: BK1261; field: status; old: CHECKED OUT; new: Checked-out; rule: standardize_status
+- csv_line: 193; booking_id: BK1261; field: check_in_date; old: 01/04/2026; new: 2026-04-01; rule: iso_date_conversion
+- csv_line: 194; booking_id: BK1241; field: check_in_date; old: 17/02/2026; new: 2026-02-17; rule: iso_date_conversion
+- csv_line: 195; booking_id: BK1171; field: booking_channel; old: ; new: Unknown; rule: missing_booking_channel
+- csv_line: 196; booking_id: BK1092; field: property; old: cedar court; new: Cedar Court; rule: standardize_property
+- csv_line: 197; booking_id: BK1081; field: property; old: cedar court; new: Cedar Court; rule: standardize_property
+- csv_line: 197; booking_id: BK1081; field: check_in_date; old: 01-21-2026; new: 2026-01-21; rule: iso_date_conversion
+- csv_line: 197; booking_id: BK1081; field: booking_channel; old: ; new: Unknown; rule: missing_booking_channel
+- csv_line: 197; booking_id: BK1081; field: total_amount_inr; old: ; new: 13324; rule: missing_total_amount
+- csv_line: 198; booking_id: BK1213; field: check_in_date; old: 24/02/2026; new: 2026-02-24; rule: iso_date_conversion
+- csv_line: 198; booking_id: BK1213; field: total_amount_inr; old: -24185; new: 24185; rule: revenue_formula_correction
+- csv_line: 200; booking_id: BK1031; field: property; old: MARIGOLD SUITES; new: Marigold Suites; rule: standardize_property
+- csv_line: 200; booking_id: BK1031; field: booking_channel; old: ota-mmt; new: OTA-MMT; rule: standardize_channel
+- csv_line: 200; booking_id: BK1031; field: check_in_date; old: 03-26-2026; new: 2026-03-26; rule: iso_date_conversion
+- csv_line: 201; booking_id: BK1052; field: property; old: cedar court; new: Cedar Court; rule: standardize_property
+- csv_line: 201; booking_id: BK1052; field: booking_channel; old: ota-mmt; new: OTA-MMT; rule: standardize_channel
+- csv_line: 201; booking_id: BK1052; field: check_in_date; old: 04-11-2026; new: 2026-04-11; rule: iso_date_conversion
+- csv_line: 202; booking_id: BK1078; field: booking_channel; old: direct; new: Direct; rule: standardize_channel
+- csv_line: 202; booking_id: BK1078; field: check_in_date; old: 14/03/2026; new: 2026-03-14; rule: iso_date_conversion
+- csv_line: 203; booking_id: BK1189; field: check_in_date; old: 04-08-2026; new: 2026-04-08; rule: iso_date_conversion
+- csv_line: 204; booking_id: BK1251; field: check_in_date; old: 24/05/2026; new: 2026-05-24; rule: iso_date_conversion
+- csv_line: 206; booking_id: BK1170; field: property; old: MARIGOLD SUITES; new: Marigold Suites; rule: standardize_property
+- csv_line: 207; booking_id: BK1154; field: property; old: MARIGOLD SUITES; new: Marigold Suites; rule: standardize_property
+- csv_line: 207; booking_id: BK1154; field: status; old: CHECKED OUT; new: Checked-out; rule: standardize_status
+- csv_line: 208; booking_id: BK1020; field: booking_channel; old: ota-mmt; new: OTA-MMT; rule: standardize_channel
+- csv_line: 210; booking_id: BK1254; field: booking_channel; old: direct; new: Direct; rule: standardize_channel
+- csv_line: 210; booking_id: BK1254; field: check_in_date; old: 05-18-2026; new: 2026-05-18; rule: iso_date_conversion
+- csv_line: 211; booking_id: BK1263; field: property; old: Marigold Suites ; new: Marigold Suites; rule: standardize_property
+- csv_line: 211; booking_id: BK1263; field: nightly_rate_inr; old: ; new: 4036; rule: missing_nightly_rate
+- csv_line: 212; booking_id: BK1011; field: property; old: Marigold Suites ; new: Marigold Suites; rule: standardize_property
+- csv_line: 212; booking_id: BK1011; field: check_in_date; old: 26 Mar 2026; new: 2026-03-26; rule: iso_date_conversion
+- csv_line: 213; booking_id: BK1073; field: property; old: MARIGOLD SUITES; new: Marigold Suites; rule: standardize_property
+- csv_line: 213; booking_id: BK1073; field: status; old: CHECKED OUT; new: Checked-out; rule: standardize_status
+- csv_line: 213; booking_id: BK1073; field: check_in_date; old: 05-10-2026; new: 2026-05-10; rule: iso_date_conversion
+- csv_line: 214; booking_id: BK1192; field: check_in_date; old: 23/05/2026; new: 2026-05-23; rule: iso_date_conversion
+- csv_line: 216; booking_id: BK1009; field: property; old: MARIGOLD SUITES; new: Marigold Suites; rule: standardize_property
+- csv_line: 216; booking_id: BK1009; field: check_in_date; old: 18 Mar 2026; new: 2026-03-18; rule: iso_date_conversion
+- csv_line: 217; booking_id: BK1063; field: check_in_date; old: 02-16-2026; new: 2026-02-16; rule: iso_date_conversion
+- csv_line: 218; booking_id: BK1093; field: property; old: MARIGOLD SUITES; new: Marigold Suites; rule: standardize_property
+- csv_line: 219; booking_id: BK1128; field: check_in_date; old: 21 Mar 2026; new: 2026-03-21; rule: iso_date_conversion
+- csv_line: 220; booking_id: BK1108; field: status; old: confirmed; new: Confirmed; rule: standardize_status
+- csv_line: 220; booking_id: BK1108; field: check_in_date; old: 01-24-2026; new: 2026-01-24; rule: iso_date_conversion
+- csv_line: 221; booking_id: BK1163; field: booking_channel; old: direct; new: Direct; rule: standardize_channel
+- csv_line: 221; booking_id: BK1163; field: check_in_date; old: 01-03-2026; new: 2026-03-01; rule: iso_date_conversion
+- csv_line: 223; booking_id: BK1114; field: property; old: Marigold Suites ; new: Marigold Suites; rule: standardize_property
+- csv_line: 223; booking_id: BK1114; field: booking_channel; old: direct; new: Direct; rule: standardize_channel
+- csv_line: 223; booking_id: BK1114; field: check_in_date; old: 25 Mar 2026; new: 2026-03-25; rule: iso_date_conversion
+- csv_line: 224; booking_id: BK1158; field: booking_channel; old: ; new: Unknown; rule: missing_booking_channel
+- csv_line: 225; booking_id: BK1288; field: property; old: MARIGOLD SUITES; new: Marigold Suites; rule: standardize_property
+- csv_line: 225; booking_id: BK1288; field: check_in_date; old: 15 Mar 2026; new: 2026-03-15; rule: iso_date_conversion
+- csv_line: 227; booking_id: BK1156; field: property; old: cedar court; new: Cedar Court; rule: standardize_property
+- csv_line: 228; booking_id: BK1117; field: status; old: confirmed; new: Confirmed; rule: standardize_status
+- csv_line: 228; booking_id: BK1117; field: check_in_date; old: 22 Mar 2026; new: 2026-03-22; rule: iso_date_conversion
+- csv_line: 229; booking_id: BK1233; field: check_in_date; old: 5 Mar 2026; new: 2026-03-05; rule: iso_date_conversion
+- csv_line: 229; booking_id: BK1233; field: booking_channel; old: ; new: Unknown; rule: missing_booking_channel
+- csv_line: 230; booking_id: BK1255; field: property; old: MARIGOLD SUITES; new: Marigold Suites; rule: standardize_property
+- csv_line: 230; booking_id: BK1255; field: booking_channel; old: ota-mmt; new: OTA-MMT; rule: standardize_channel
+- csv_line: 230; booking_id: BK1255; field: check_in_date; old: 02-23-2026; new: 2026-02-23; rule: iso_date_conversion
+- csv_line: 233; booking_id: BK1258; field: property; old: cedar court; new: Cedar Court; rule: standardize_property
+- csv_line: 233; booking_id: BK1258; field: booking_channel; old: direct; new: Direct; rule: standardize_channel
+- csv_line: 233; booking_id: BK1258; field: status; old: confirmed; new: Confirmed; rule: standardize_status
+- csv_line: 233; booking_id: BK1258; field: check_in_date; old: 19/02/2026; new: 2026-02-19; rule: iso_date_conversion
+- csv_line: 234; booking_id: BK1175; field: property; old: MARIGOLD SUITES; new: Marigold Suites; rule: standardize_property
+- csv_line: 234; booking_id: BK1175; field: status; old: confirmed; new: Confirmed; rule: standardize_status
+- csv_line: 234; booking_id: BK1175; field: check_in_date; old: 7 Mar 2026; new: 2026-03-07; rule: iso_date_conversion
+- csv_line: 235; booking_id: BK1260; field: property; old: Marigold Suites ; new: Marigold Suites; rule: standardize_property
+- csv_line: 235; booking_id: BK1260; field: booking_channel; old: direct; new: Direct; rule: standardize_channel
+- csv_line: 235; booking_id: BK1260; field: check_in_date; old: 21 Mar 2026; new: 2026-03-21; rule: iso_date_conversion
+- csv_line: 236; booking_id: BK1203; field: property; old: Palm grove inn; new: Palm Grove Inn; rule: standardize_property
+- csv_line: 236; booking_id: BK1203; field: check_in_date; old: 26 Mar 2026; new: 2026-03-26; rule: iso_date_conversion
+- csv_line: 236; booking_id: BK1203; field: booking_channel; old: ; new: Unknown; rule: missing_booking_channel
+- csv_line: 237; booking_id: BK1083; field: property; old: Marigold Suites ; new: Marigold Suites; rule: standardize_property
+- csv_line: 237; booking_id: BK1083; field: check_in_date; old: 9 Mar 2026; new: 2026-03-09; rule: iso_date_conversion
+- csv_line: 238; booking_id: BK1169; field: booking_channel; old: direct; new: Direct; rule: standardize_channel
+- csv_line: 238; booking_id: BK1169; field: check_in_date; old: 01-19-2026; new: 2026-01-19; rule: iso_date_conversion
+- csv_line: 239; booking_id: BK1259; field: property; old: MARIGOLD SUITES; new: Marigold Suites; rule: standardize_property
+- csv_line: 239; booking_id: BK1259; field: booking_channel; old: ; new: Unknown; rule: missing_booking_channel
