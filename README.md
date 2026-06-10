@@ -79,6 +79,20 @@ npm.cmd run build
 - Health Score validation passed for all 5 properties.
 - Production build passed successfully.
 
+- Architecture
+
+  CSV / Database
+      ↓
+Backend API (Python/FastAPI or Node.js)
+      ↓
+Calculate Metrics
+      ↓
+Return JSON
+      ↓
+React Frontend
+      ↓
+Display Results
+
 ## Key Files
 
 - [scripts/data_audit.py](scripts/data_audit.py)
